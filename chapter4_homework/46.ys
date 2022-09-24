@@ -1,0 +1,9 @@
+    # rdi = data rsi = count
+    addq %rsi, %rsi
+    addq %rsi, %rsi
+    addq %rsi, %rsi # 8 * %rsi
+    addq %rdi, %rsi
+    irmovq $-8, %rcx
+    addq %rcx, %rsi # line 8
+.L3:
+    

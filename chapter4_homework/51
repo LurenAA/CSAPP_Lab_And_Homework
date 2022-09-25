@@ -1,0 +1,14 @@
+F:  icode:ifun <- M[PC]
+    rA:rB <- M[PC + 1]
+    valC <- M[PC + 2]
+    valP <- PC + 10
+
+D:  valB <- R[rB]
+
+E: valE <- valB OP valC
+
+M:
+
+W:R[rB] <- valE
+
+Refresh PC: PC <- valP

@@ -1,0 +1,56 @@
+0x000:                      | .pos 0
+0x000: 30f40002000000000000 |     irmovq stack, %rsp
+0x00a: 803800000000000000   |     call main
+0x013: 00                   |     halt
+0x018:                      | .align 8
+0x018:                      | data:
+0x018: 0400000000000000     |     .quad	4
+0x020: 0300000000000000     | 	.quad	3
+0x028: 0200000000000000     | 	.quad	2
+0x030: 0100000000000000     | 	.quad	1
+0x038:                      | main:
+0x038: 30f71800000000000000 |     irmovq data, %rdi
+0x042: 30f60400000000000000 |     irmovq $4, %rsi
+0x04c: 805500000000000000   |     call bubble_b
+                            | 
+0x055:                      | bubble_b:
+                            |     # rdi = data rsi = count
+0x055: 6066                 |     addq %rsi, %rsi
+0x057: 6066                 |     addq %rsi, %rsi
+0x059: 6066                 |     addq %rsi, %rsi # 8 * %rsi
+0x05b: 6076                 |     addq %rdi, %rsi # data + 8 * %rsi
+0x05d: 30f1f8ffffffffffffff |     irmovq $-8, %rcx  
+0x067: 6016                 |     addq %rcx, %rsi #  last = data + 8 * %rsi - 8
+                            |     # rsi = last
+0x069: 30f10800000000000000 |     irmovq $8, %rcx  
+0x073: 70d000000000000000   |     jmp	L2
+0x07c:                      | L3:
+0x07c: 6010                 |     addq %rcx, %rax
+0x07e:                      | L5:
+0x07e: 200c                 |     rrmovq %rax, %r12
+0x080: 616c                 |     subq %rsi, %r12 # r12 = i - last
+0x082: 75ce00000000000000   |     jge L7
+0x08b: 50800000000000000000 |     mrmovq (%rax), %r8
+0x095: 50900800000000000000 |     mrmovq 8(%rax), %r9
+0x09f: 50e00800000000000000 |     mrmovq 8(%rax), %r14
+0x0a9: 618e                 |     subq %r8, %r14  # *(i + 1) - *(i)
+0x0ab: 209a                 |     rrmovq %r9, %r10
+0x0ad: 2289                 |     cmovl %r8, %r9
+0x0af: 22a8                 |     cmovl %r10, %r8
+0x0b1: 40800000000000000000 |     rmmovq %r8, (%rax)
+0x0bb: 40900800000000000000 |     rmmovq %r9, 8(%rax)
+0x0c5: 707c00000000000000   |     jmp L3
+0x0ce:                      | L7:
+0x0ce: 6116                 |     subq %rcx, %rsi
+0x0d0:                      | L2:
+0x0d0: 206b                 |     rrmovq %rsi, %r11 # copy rsi => r11
+0x0d2: 617b                 |     subq %rdi,%r11 # r11 = last - data
+0x0d4: 71e800000000000000   |     jle L8
+0x0dd: 2070                 |     rrmovq %rdi, %rax  # i = data
+                            |     # rax = i
+0x0df: 707e00000000000000   |     jmp L5 
+0x0e8:                      | L8:
+0x0e8: 90                   |     ret
+                            | 
+0x200:                      | .pos 0x200
+0x200:                      | stack:

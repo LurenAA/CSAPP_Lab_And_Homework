@@ -1,0 +1,56 @@
+.pos 0
+    irmovq stack, %rsp
+    call main
+    halt
+.align 8
+data:
+    .quad	4
+	.quad	3
+	.quad	2
+	.quad	1
+main:
+    irmovq data, %rdi
+    irmovq $4, %rsi
+    call bubble_b
+
+bubble_b:
+    # rdi = data rsi = count
+    addq %rsi, %rsi
+    addq %rsi, %rsi
+    addq %rsi, %rsi # 8 * %rsi
+    addq %rdi, %rsi # data + 8 * %rsi
+    irmovq $-8, %rcx  
+    addq %rcx, %rsi #  last = data + 8 * %rsi - 8
+    # rsi = last
+    irmovq $8, %rcx  
+    jmp	L2
+L3:
+    addq %rcx, %rax
+L5:
+    rrmovq %rax, %r12
+    subq %rsi, %r12 # r12 = i - last
+    jge L7
+    mrmovq (%rax), %r8
+    mrmovq 8(%rax), %r9
+    mrmovq 8(%rax), %r14
+    subq %r8, %r14  # *(i + 1) - *(i)
+    rrmovq %r9, %r10
+    cmovl %r8, %r9
+    cmovl %r10, %r8
+    rmmovq %r8, (%rax)
+    rmmovq %r9, 8(%rax)
+    jmp L3
+L7:
+    subq %rcx, %rsi
+L2:
+    rrmovq %rsi, %r11 # copy rsi => r11
+    subq %rdi,%r11 # r11 = last - data
+    jle L8
+    rrmovq %rdi, %rax  # i = data
+    # rax = i
+    jmp L5 
+L8:
+    ret
+
+.pos 0x200
+stack:

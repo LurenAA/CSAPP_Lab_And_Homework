@@ -323,7 +323,7 @@ bool F_stall =
 				d_srcB in { e_dstE, E_dstM, M_dstM, M_dstE, W_dstM, W_dstE }
 			)
 		)
-	) && !(E_icode == IJXX && !e_Cnd)
+	) 
 	;
 
 # Should I stall or inject a bubble into Pipeline Register D?
@@ -340,7 +340,7 @@ bool D_stall =
 			d_srcB != RNONE  &&
 			d_srcB in { e_dstE, E_dstM, M_dstM, M_dstE, W_dstM, W_dstE }
 		)
-	) && !(E_icode == IJXX && !e_Cnd);
+	);
 
 bool D_bubble =
 	# Mispredicted branch

@@ -183,7 +183,9 @@ bool need_valC =
 # Predict next value of PC
 word f_predPC = [
 	# BBTFNT: This is where you'll change the branch prediction rule
-	f_icode in { IJXX, ICALL } : f_valC;
+	f_icode == ICALL || f_icode == IJXX && f_ifun == UNCOND : f_valC;
+	f_icode == IJXX && f_valC >= f_valP: f_valP;
+	f_icode == IJXX && f_valC < f_valP: f_valC;
 	1 : f_valP;
 ];
 
@@ -273,7 +275,11 @@ bool set_cc = E_icode == IOPQ &&
 	!m_stat in { SADR, SINS, SHLT } && !W_stat in { SADR, SINS, SHLT };
 
 ## Generate valA in execute stage
-word e_valA = E_valA;    # Pass valA through stage
+## word e_valA = E_valA;    # Pass valA through stage
+word e_valA = [
+	(E_icode == IJXX && E_ifun != UNCOND): E_valC;
+	1: E_valA;    # Pass valA through stage
+];
 
 ## Set dstE to RNONE in event of not-taken conditional move
 word e_dstE = [

@@ -137,9 +137,12 @@ wordsig W_valM  'mem_wb_curr->valm'	# Memory M value
 ################ Fetch Stage     ###################################
 
 ## What address should instruction be fetched at
+## 1 forward   0 backward
+
 word f_pc = [
 	# Mispredicted branch.  Fetch at incremented PC
-	M_icode == IJXX && !M_Cnd : M_valA;
+	# M_icode == IJXX && !M_Cnd : M_valA;
+	M_icode == IJXX && M_icode != UNCOND && ((M_dstE == 1 && M_Cnd) || (M_dstE == 0 && !M_Cnd)) : M_valA;
 	# Completion of RET instruction
 	W_icode == IRET : W_valM;
 	# Default: Use predicted value of PC
@@ -183,7 +186,9 @@ bool need_valC =
 # Predict next value of PC
 word f_predPC = [
 	# BBTFNT: This is where you'll change the branch prediction rule
-	f_icode in { IJXX, ICALL } : f_valC;
+	f_icode == ICALL || (f_icode == IJXX && f_ifun == UNCOND) : f_valC;
+	# f_icode == IJXX && f_ifun != UNCOND && f_valC >= f_valP: f_valP;
+	f_icode == IJXX && f_ifun != UNCOND && f_valC < f_valP: f_valC;
 	1 : f_valP;
 ];
 
@@ -221,20 +226,20 @@ word d_dstM = [
 ## Forward into decode stage for valA
 word d_valA = [
 	D_icode in { ICALL, IJXX } : D_valP; # Use incremented PC
-	d_srcA == e_dstE : e_valE;    # Forward valE from execute
+	d_srcA == e_dstE && E_icode != IJXX: e_valE;    # Forward valE from execute
 	d_srcA == M_dstM : m_valM;    # Forward valM from memory
-	d_srcA == M_dstE : M_valE;    # Forward valE from memory
+	d_srcA == M_dstE && M_icode != IJXX: M_valE;    # Forward valE from memory
 	d_srcA == W_dstM : W_valM;    # Forward valM from write back
-	d_srcA == W_dstE : W_valE;    # Forward valE from write back
+	d_srcA == W_dstE && W_icode != IJXX: W_valE;    # Forward valE from write back
 	1 : d_rvalA;  # Use value read from register file
 ];
 
 word d_valB = [
-	d_srcB == e_dstE : e_valE;    # Forward valE from execute
+	d_srcB == e_dstE && E_icode != IJXX: e_valE;    # Forward valE from execute
 	d_srcB == M_dstM : m_valM;    # Forward valM from memory
-	d_srcB == M_dstE : M_valE;    # Forward valE from memory
-	d_srcB == W_dstM : W_valM;    # Forward valM from write back
-	d_srcB == W_dstE : W_valE;    # Forward valE from write back
+	d_srcB == M_dstE && M_icode != IJXX: M_valE;    # Forward valE from memory
+	d_srcB == W_dstM : W_valM ;    # Forward valM from write back
+	d_srcB == W_dstE && W_icode != IJXX: W_valE;    # Forward valE from write back
 	1 : d_rvalB;  # Use value read from register file
 ];
 
@@ -273,11 +278,18 @@ bool set_cc = E_icode == IOPQ &&
 	!m_stat in { SADR, SINS, SHLT } && !W_stat in { SADR, SINS, SHLT };
 
 ## Generate valA in execute stage
-word e_valA = E_valA;    # Pass valA through stage
+## word e_valA = E_valA;    # Pass valA through stage
+word e_valA = [
+	(E_icode == IJXX && E_ifun != UNCOND && E_valC >= E_valA): E_valC;
+	(E_icode == IJXX && E_ifun != UNCOND && E_valC < E_valA): E_valA;
+	1: E_valA;    # Pass valA through stage
+];
 
 ## Set dstE to RNONE in event of not-taken conditional move
 word e_dstE = [
 	E_icode == IRRMOVQ && !e_Cnd : RNONE;
+	(E_icode == IJXX && E_ifun != UNCOND && E_valC >= E_valA): 1;
+	(E_icode == IJXX && E_ifun != UNCOND && E_valC < E_valA): 0;
 	1 : E_dstE;
 ];
 
@@ -305,7 +317,11 @@ word m_stat = [
 #/* $end pipe-m_stat-hcl */
 
 ## Set E port register ID
-word w_dstE = W_dstE;
+## word w_dstE = W_dstE;
+word w_dstE = [
+	W_icode == IJXX: RNONE;
+	1: W_dstE;
+];
 
 ## Set E port value
 word w_valE = W_valE;
@@ -343,7 +359,7 @@ bool D_stall =
 
 bool D_bubble =
 	# Mispredicted branch
-	(E_icode == IJXX && !e_Cnd) ||
+	(E_icode == IJXX && E_ifun != UNCOND && ((!e_Cnd && E_valC < E_valA) || (e_Cnd && E_valC >= E_valA))) ||
 	# BBTFNT: This condition will change
 	# Stalling at fetch while ret passes through pipeline
 	# but not condition for a load/use hazard
@@ -355,7 +371,7 @@ bool D_bubble =
 bool E_stall = 0;
 bool E_bubble =
 	# Mispredicted branch
-	(E_icode == IJXX && !e_Cnd) ||
+	(E_icode == IJXX && E_ifun != UNCOND && ((!e_Cnd && E_valC < E_valA) || (e_Cnd && E_valC >= E_valA))) ||
 	# BBTFNT: This condition will change
 	# Conditions for a load/use hazard
 	E_icode in { IMRMOVQ, IPOPQ } &&
